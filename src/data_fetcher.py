@@ -19,7 +19,9 @@ class ChampionStatsFetcher:
         試合が始まっていない、または接続できない場合は None を返します。
         """
         try:
-            response = self.http.request('GET', self.api_url, timeout=1.0)
+            # 接続タイムアウトと読み込みタイムアウトをそれぞれ1秒に設定し、ソケットのハングを防ぐ
+            timeout = urllib3.Timeout(connect=1.0, read=1.0)
+            response = self.http.request('GET', self.api_url, timeout=timeout)
             if response.status != 200:
                 return None
             
@@ -34,6 +36,12 @@ class ChampionStatsFetcher:
         ゲームデータから敵チームのプレイヤーを抽出し、
         最もKDAスコアが高いプレイヤーを特定します。
         """
+        # 試合終了イベント（GameEnd）が記録されている場合は、試合終了とみなして None を返す
+        events = game_data.get("events", {}).get("Events", [])
+        for event in events:
+            if event.get("EventName") == "GameEnd":
+                return None
+
         active_player = game_data.get("activePlayer")
         all_players = game_data.get("allPlayers", [])
 
