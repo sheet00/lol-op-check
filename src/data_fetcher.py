@@ -77,6 +77,7 @@ class ChampionStatsFetcher:
                     "kills": kills,
                     "deaths": deaths,
                     "assists": assists,
+                    "is_dead": enemy.get("isDead", False),
                 }
 
         return strongest_enemy

@@ -66,7 +66,7 @@ class OverlayWindow:
         # タイトル表示
         self.title_label = tk.Label(
             self.frame,
-            text="🔥 MOST POWERFUL CHAMPION",
+            text="MOST POWERFUL CHAMPION",
             anchor="nw",
             bg="#080c12",
             fg="#ff4655", # 警告色っぽい鮮やかなネオンレッド
@@ -142,13 +142,19 @@ class OverlayWindow:
             kills = champ.get("kills", 0)
             deaths = champ.get("deaths", 0)
             assists = champ.get("assists", 0)
+            is_dead = champ.get("is_dead", False)
             
-            display_text = f"{name}\nKDA: {kills} / {deaths} / {assists}"
-            self.info_label.config(text=display_text, fg="#e2e8f0", font=("Meiryo UI", 11, "bold"))
-            self.title_label.config(text="🔥 STRONGEST ENEMY", fg="#ff4655")
+            if is_dead:
+                display_text = f"{name} [DEAD]\nKDA: {kills} / {deaths} / {assists}"
+                self.info_label.config(text=display_text, fg="#475569", font=("Meiryo UI", 11, "bold"))
+                self.title_label.config(text="STRONGEST ENEMY (DEAD)", fg="#64748b")
+            else:
+                display_text = f"{name}\nKDA: {kills} / {deaths} / {assists}"
+                self.info_label.config(text=display_text, fg="#e2e8f0", font=("Meiryo UI", 11, "bold"))
+                self.title_label.config(text="STRONGEST ENEMY", fg="#ff4655")
         else:
             self.info_label.config(text="Waiting for game...", fg="#a0aab8", font=("Meiryo UI", 10))
-            self.title_label.config(text="💤 WAITING", fg="#a0aab8")
+            self.title_label.config(text="WAITING FOR GAME", fg="#a0aab8")
 
     def process_events(self):
         if self.is_closed() or not self._widget_exists(self.root):
