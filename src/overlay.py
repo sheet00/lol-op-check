@@ -35,8 +35,8 @@ class OverlayWindow:
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
 
-        # 画面左上に配置 (幅 250px, 高さ 80px, x=10, y=10)
-        self.root.geometry("250x80+10+10")
+        # 画面左上に配置 (幅 270px, 高さ 80px, x=10, y=10)
+        self.root.geometry("270x80+10+10")
         
         # 近未来的なディープダーク背景
         self.root.configure(bg="#080c12")
