@@ -138,6 +138,10 @@ class ChampionStatsFetcher:
             assists = scores.get("assists", 0)
             champion_name = enemy.get("championName", "Unknown")
 
+            # キルもアシストも獲得していない（0/0/0などの）初期プレイヤーは評価から除外する
+            if kills == 0 and assists == 0:
+                continue
+
             # KDAスコアの計算 (Kills * 3 + Assists * 1 - Deaths * 2)
             kda_score = kills * 3 + assists * 1 - deaths * 2
 
@@ -182,9 +186,31 @@ class ChampionStatsFetcher:
         """
         total_gold = 0
         items = player_data.get("items", [])
+        has_boots = False
+
+        # ブーツ系のアイテムIDリスト (Tier 1 & Tier 2)
+        # 3006: バーサーカー, 3009: スイフトネス, 3020: ソーサラー, 3047: スチールキャップ,
+        # 3111: マーキュリー, 3158: アイオニア, 3117: モビリティ, 3175: 連呪使い, 2422: 少しだけ魔法の靴, 1001: 速度のブーツ
+        boot_ids = {3006, 3009, 3020, 3047, 3111, 3158, 3117, 3175, 2422, 1001}
+
         for item in items:
             item_id = item.get("itemID", 0)
+            if item_id in boot_ids:
+                has_boots = True
             price = self.item_prices.get(item_id, item.get("price", 0))
             count = item.get("count", 1)
             total_gold += price * count
+
+        # カシオペア(Cassiopeia)は靴を購入できないため除外
+        raw_champ = player_data.get("rawChampionName", "").lower()
+        is_cassiopeia = "cassiopeia" in raw_champ
+
+        # シーズン16のRole Quests対策: 
+        # レベル8以上で通常インベントリに靴が1つもないプレイヤーは、
+        # 専用スロットに靴が移動したとみなしてゴールド計算に 1100G（Tier 2靴の平均価値）を加算する
+        if not has_boots and not is_cassiopeia:
+            player_level = player_data.get("level", 1)
+            if player_level >= 8:
+                total_gold += 1100
+
         return total_gold
