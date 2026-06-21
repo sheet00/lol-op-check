@@ -10,7 +10,7 @@ class ChampionStatsFetcher:
     敵チームの中で最もKDAが良い（育っている）チャンピオンを特定します。
     """
     def __init__(self):
-        self.http = urllib3.PoolManager(cert_reqs='CERT_NONE')
+        self.http = urllib3.PoolManager(cert_reqs='CERT_NONE', retries=False)
         self.api_url = "https://127.0.0.1:2999/liveclientdata/allgamedata"
 
     def fetch_strongest_enemy(self):
@@ -21,7 +21,7 @@ class ChampionStatsFetcher:
         try:
             # 接続タイムアウトと読み込みタイムアウトをそれぞれ1秒に設定し、ソケットのハングを防ぐ
             timeout = urllib3.Timeout(connect=1.0, read=1.0)
-            response = self.http.request('GET', self.api_url, timeout=timeout)
+            response = self.http.request('GET', self.api_url, timeout=timeout, retries=False)
             if response.status != 200:
                 return None
             
