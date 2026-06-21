@@ -84,7 +84,7 @@ class ChampionStatsFetcher:
         my_team_avg = sum(my_team_golds) / len(my_team_golds) if my_team_golds else 0.0
 
         strongest_enemy = None
-        max_score = -999.0
+        max_gold = -1.0
         strongest_gold = 0
 
         for enemy in enemies:
@@ -94,13 +94,13 @@ class ChampionStatsFetcher:
             assists = scores.get("assists", 0)
             champion_name = enemy.get("championName", "Unknown")
 
-            # スコア計算式: 育っている（キャリーしている）指標
-            # キルを最重視し、アシストを加算、デスで減算する単純な強さ評価値
-            score = (kills * 3) + (assists * 1) - (deaths * 2)
+            # 装備ゴールドの計算
+            equipment_gold = self._calculate_equipment_gold(enemy)
 
-            if score > max_score:
-                max_score = score
-                strongest_gold = self._calculate_equipment_gold(enemy)
+            # 金額ベース（装備ゴールド合計）で最も強いやつを特定
+            if equipment_gold > max_gold:
+                max_gold = equipment_gold
+                strongest_gold = equipment_gold
                 strongest_enemy = {
                     "name": champion_name,
                     "kills": kills,
