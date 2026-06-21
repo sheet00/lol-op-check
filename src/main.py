@@ -46,10 +46,9 @@ def main():
                             status="待機中",
                             strongest_champion=None
                         )
-                except Exception as e:
-                    logger.error(f"Error fetching data: {e}")
+                except Exception:
                     overlay_state.update(
-                        status="データ取得エラー",
+                        status="待機中",
                         strongest_champion=None
                     )
                 

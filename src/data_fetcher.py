@@ -1,8 +1,11 @@
 import urllib3
 import json
+import logging
 
 # SSL証明書のエラー出力を抑制 (Live Client APIはオレオレ証明書のため)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# urllib3 のリトライ警告などがコンソールに出力されるのを抑制する
+logging.getLogger("urllib3").setLevel(logging.ERROR)
 
 class ChampionStatsFetcher:
     """
@@ -19,16 +22,18 @@ class ChampionStatsFetcher:
         試合が始まっていない、または接続できない場合は None を返します。
         """
         try:
-            # 接続タイムアウトと読み込みタイムアウトをそれぞれ1秒に設定し、ソケットのハングを防ぐ
-            timeout = urllib3.Timeout(connect=1.0, read=1.0)
+            # 接続タイムアウトと読み込みタイムアウトをそれぞれ0.2秒に設定し、ソケットのハングを防ぐ
+            timeout = urllib3.Timeout(connect=0.2, read=0.2)
             response = self.http.request('GET', self.api_url, timeout=timeout, retries=False)
             if response.status != 200:
+                self.http.clear() # 接続不良時はプール内の接続をクリア
                 return None
             
             data = json.loads(response.data.decode('utf-8'))
             return self._analyze_strongest_enemy(data)
         except Exception:
-            # 接続エラー（LoLが起動していない、試合中でないなど）の場合は None
+            # 接続エラーやタイムアウトが発生した場合は、ハングしたソケットを強制的にクローズしてクリアする
+            self.http.clear()
             return None
 
     def _analyze_strongest_enemy(self, game_data):
@@ -36,10 +41,19 @@ class ChampionStatsFetcher:
         ゲームデータから敵チームのプレイヤーを抽出し、
         最もKDAスコアが高いプレイヤーを特定します。
         """
-        # 試合終了イベント（GameEnd）が記録されている場合は、試合終了とみなして None を返す
-        events = game_data.get("events", {}).get("Events", [])
-        for event in events:
-            if event.get("EventName") == "GameEnd":
+        # APIレスポンス構造の揺れ（events/Events のキーや大文字小文字など）に依存せず GameEnd イベントを確実に検知する
+        events_list = []
+        for e_key in ["events", "Events"]:
+            if e_key in game_data:
+                events_data = game_data[e_key]
+                if isinstance(events_data, dict):
+                    events_list = events_data.get("Events", [])
+                elif isinstance(events_data, list):
+                    events_list = events_data
+                break
+        
+        for event in events_list:
+            if str(event.get("EventName", "")).lower() == "gameend":
                 return None
 
         active_player = game_data.get("activePlayer")
