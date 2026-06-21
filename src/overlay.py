@@ -93,8 +93,16 @@ class OverlayWindow:
         )
         self.info_label.pack(fill="both", expand=True, padx=6, pady=(0, 6))
 
+        # 棒グラフ描画用キャンバス
+        self.canvas = tk.Canvas(
+            self.frame,
+            bg="#0d131f",
+            highlightthickness=0,
+            bd=0,
+        )
+
         # ドラッグ可能にするためのバインド
-        for widget in (self.root, self.frame, self.title_label, self.info_label):
+        for widget in (self.root, self.frame, self.title_label, self.info_label, self.canvas):
             widget.bind("<ButtonPress-1>", self._start_drag)
             widget.bind("<B1-Motion>", self._drag)
             widget.bind("<Button-3>", self._handle_close_event)
@@ -147,33 +155,74 @@ class OverlayWindow:
             assists = champ.get("assists", 0)
             is_dead = champ.get("is_dead", False)
             level = champ.get("level", 1)
+            
             gold_ratio = champ.get("gold_ratio", 1.0)
+            my_gold_ratio = champ.get("my_gold_ratio", 1.0)
             
-            # パーセンテージ差分を計算 (+40% や -10% など)
-            percent_diff = int(round((gold_ratio - 1.0) * 100))
-            percent_text = f"+{percent_diff}%" if percent_diff >= 0 else f"{percent_diff}%"
-            
+            avg_pct = 100
+            my_pct = int(round(my_gold_ratio * 100))
+            enemy_pct = int(round(gold_ratio * 100))
+
             if is_dead:
                 respawn_timer = champ.get("respawn_timer", 0)
-                display_text = f"{name} (Lv.{level}) [{percent_text}] [{respawn_timer}s]\nKDA: {kills} / {deaths} / {assists}"
+                display_text = f"{name} (Lv.{level}) [{respawn_timer}s]\nKDA: {kills} / {deaths} / {assists}"
                 self.info_label.config(text=display_text, fg="#475569", font=("Meiryo UI", 11, "bold"))
                 self.title_label.config(text="STRONGEST ENEMY", fg="#64748b")
             else:
-                display_text = f"{name} (Lv.{level}) [{percent_text}]\nKDA: {kills} / {deaths} / {assists}"
+                display_text = f"{name} (Lv.{level})\nKDA: {kills} / {deaths} / {assists}"
                 
                 # ゴールド格差（パーセント）に応じた条件付きカラーリング
-                if percent_diff >= 40:
+                if enemy_pct >= 140:
                     self.info_label.config(text=display_text, fg="#f87171", font=("Meiryo UI", 11, "bold"))
                     self.title_label.config(text="STRONGEST ENEMY (DANGER)", fg="#ff4655")
-                elif percent_diff >= 10:
+                elif enemy_pct >= 110:
                     self.info_label.config(text=display_text, fg="#fcd34d", font=("Meiryo UI", 11, "bold"))
                     self.title_label.config(text="STRONGEST ENEMY (WARN)", fg="#fbbf24")
                 else:
                     self.info_label.config(text=display_text, fg="#e2e8f0", font=("Meiryo UI", 11, "bold"))
                     self.title_label.config(text="STRONGEST ENEMY", fg="#ff4655")
+
+            # ジオメトリを広げてキャンバスを表示
+            self.root.geometry("270x165")
+            self.canvas.pack(fill="both", expand=True, padx=6, pady=(0, 6))
+            
+            # キャンバスの描画を更新
+            self.canvas.delete("all")
+            
+            # 最大スケールの計算
+            max_val = max(150, avg_pct, my_pct, enemy_pct)
+            
+            # 描画パラメータ
+            x_start = 90
+            bar_max_width = 155
+            
+            # AVG描画
+            self.canvas.create_text(5, 12, text="AVG  100%", anchor="w", fill="#a0aab8", font=("Meiryo UI", 9, "bold"))
+            avg_width = (avg_pct / max_val) * bar_max_width
+            self.canvas.create_rectangle(x_start, 6, x_start + avg_width, 16, fill="#3b82f6", width=0)
+            
+            # YOU描画
+            self.canvas.create_text(5, 32, text=f"YOU  {my_pct}%", anchor="w", fill="#a0aab8", font=("Meiryo UI", 9, "bold"))
+            my_width = (my_pct / max_val) * bar_max_width
+            self.canvas.create_rectangle(x_start, 26, x_start + my_width, 36, fill="#10b981", width=0)
+            
+            # OP描画
+            op_color = "#a0aab8"
+            if enemy_pct >= 140:
+                op_color = "#ff4655"
+            elif enemy_pct >= 110:
+                op_color = "#fbbf24"
+            self.canvas.create_text(5, 52, text=f"OP   {enemy_pct}%", anchor="w", fill="#a0aab8", font=("Meiryo UI", 9, "bold"))
+            enemy_width = (enemy_pct / max_val) * bar_max_width
+            self.canvas.create_rectangle(x_start, 46, x_start + enemy_width, 56, fill=op_color, width=0)
+            
         else:
             self.info_label.config(text="Waiting for game...", fg="#a0aab8", font=("Meiryo UI", 10))
             self.title_label.config(text="WAITING FOR GAME", fg="#a0aab8")
+            
+            # ジオメトリを縮小してキャンバスを隠す
+            self.root.geometry("270x80")
+            self.canvas.pack_forget()
 
     def process_events(self):
         if self.is_closed() or not self._widget_exists(self.root):

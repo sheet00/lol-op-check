@@ -83,9 +83,16 @@ class ChampionStatsFetcher:
         my_team_golds = [self._calculate_equipment_gold(p) for p in my_team_players]
         my_team_avg = sum(my_team_golds) / len(my_team_golds) if my_team_golds else 0.0
 
+        # 自分自身の装備ゴールドを求める
+        my_gold = 0.0
+        for p in my_team_players:
+            if p.get("summonerName") == my_name:
+                my_gold = self._calculate_equipment_gold(p)
+                break
+
         strongest_enemy = None
-        max_gold = -1.0
-        strongest_gold = 0
+        max_score = -9999.0
+        strongest_gold = 0.0
 
         for enemy in enemies:
             scores = enemy.get("scores", {})
@@ -94,12 +101,15 @@ class ChampionStatsFetcher:
             assists = scores.get("assists", 0)
             champion_name = enemy.get("championName", "Unknown")
 
+            # KDAスコアの計算 (Kills * 3 + Assists * 1 - Deaths * 2)
+            kda_score = kills * 3 + assists * 1 - deaths * 2
+
             # 装備ゴールドの計算
             equipment_gold = self._calculate_equipment_gold(enemy)
 
-            # 金額ベース（装備ゴールド合計）で最も強いやつを特定
-            if equipment_gold > max_gold:
-                max_gold = equipment_gold
+            # 純粋にKDAスコアが一番大きいやつを特定 (同点の場合は装備ゴールドが多い方を優先)
+            if kda_score > max_score or (kda_score == max_score and equipment_gold > strongest_gold):
+                max_score = kda_score
                 strongest_gold = equipment_gold
                 strongest_enemy = {
                     "name": champion_name,
@@ -116,9 +126,15 @@ class ChampionStatsFetcher:
             return None
 
         if strongest_enemy:
-            # 自チームの平均装備ゴールドに対する倍率を計算
-            ratio = strongest_gold / my_team_avg if my_team_avg > 0 else 1.0
-            strongest_enemy["gold_ratio"] = round(ratio, 1)
+            # 自チームの平均装備ゴールドに対する倍率を求め、4乗モデルで戦闘力比率を計算
+            enemy_base_ratio = strongest_gold / my_team_avg if my_team_avg > 0 else 1.0
+            ratio = enemy_base_ratio ** 4
+            strongest_enemy["gold_ratio"] = round(ratio, 2)
+            
+            # 自分自身の戦闘力比率を計算
+            my_base_ratio = my_gold / my_team_avg if my_team_avg > 0 else 1.0
+            my_ratio = my_base_ratio ** 4
+            strongest_enemy["my_gold_ratio"] = round(my_ratio, 2)
 
         return strongest_enemy
 
