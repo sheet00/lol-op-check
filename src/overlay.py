@@ -1,6 +1,9 @@
 import threading
 import tkinter as tk
 
+# 引数が渡されなかったことを判定するためのセンチネルオブジェクト
+_UNSPECIFIED = object()
+
 class OverlayState:
     def __init__(self):
         self.lock = threading.Lock()
@@ -9,11 +12,11 @@ class OverlayState:
             "strongest_champion": None,
         }
 
-    def update(self, *, status=None, strongest_champion=None):
+    def update(self, *, status=_UNSPECIFIED, strongest_champion=_UNSPECIFIED):
         with self.lock:
-            if status is not None:
+            if status is not _UNSPECIFIED:
                 self.data["status"] = status
-            if strongest_champion is not None:
+            if strongest_champion is not _UNSPECIFIED:
                 self.data["strongest_champion"] = strongest_champion
 
     def snapshot(self):
@@ -148,11 +151,11 @@ class OverlayWindow:
             
             if is_dead:
                 respawn_timer = champ.get("respawn_timer", 0)
-                display_text = f"{name} (Lv.{level}) [x{gold_ratio} Avg] [DEAD ({respawn_timer}s)]\nKDA: {kills} / {deaths} / {assists}"
+                display_text = f"{name} (Lv.{level}) [x{gold_ratio}] [DEAD ({respawn_timer}s)]\nKDA: {kills} / {deaths} / {assists}"
                 self.info_label.config(text=display_text, fg="#475569", font=("Meiryo UI", 11, "bold"))
                 self.title_label.config(text="STRONGEST ENEMY (DEAD)", fg="#64748b")
             else:
-                display_text = f"{name} (Lv.{level}) [x{gold_ratio} Avg]\nKDA: {kills} / {deaths} / {assists}"
+                display_text = f"{name} (Lv.{level}) [x{gold_ratio}]\nKDA: {kills} / {deaths} / {assists}"
                 
                 # ゴールド倍率に応じた条件付きカラーリング
                 if gold_ratio >= 1.5:
