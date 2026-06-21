@@ -78,8 +78,13 @@ class ChampionStatsFetcher:
         if not enemies:
             return None
 
+        # 敵チーム全体の装備ゴールドを計算し、平均値を求める
+        enemy_golds = [self._calculate_equipment_gold(e) for e in enemies]
+        avg_gold = sum(enemy_golds) / len(enemy_golds) if enemy_golds else 0.0
+
         strongest_enemy = None
         max_score = -999.0
+        strongest_gold = 0
 
         for enemy in enemies:
             scores = enemy.get("scores", {})
@@ -94,6 +99,7 @@ class ChampionStatsFetcher:
 
             if score > max_score:
                 max_score = score
+                strongest_gold = self._calculate_equipment_gold(enemy)
                 strongest_enemy = {
                     "name": champion_name,
                     "kills": kills,
@@ -108,4 +114,21 @@ class ChampionStatsFetcher:
         if strongest_enemy and strongest_enemy["kills"] == 0 and strongest_enemy["assists"] == 0:
             return None
 
+        if strongest_enemy:
+            # 平均装備ゴールドに対する倍率を計算
+            ratio = strongest_gold / avg_gold if avg_gold > 0 else 1.0
+            strongest_enemy["gold_ratio"] = round(ratio, 1)
+
         return strongest_enemy
+
+    def _calculate_equipment_gold(self, player_data):
+        """
+        対象プレイヤーの現在所持している装備（アイテム）の合計ゴールド価値を計算します。
+        """
+        total_gold = 0
+        items = player_data.get("items", [])
+        for item in items:
+            price = item.get("price", 0)
+            count = item.get("count", 1)
+            total_gold += price * count
+        return total_gold
