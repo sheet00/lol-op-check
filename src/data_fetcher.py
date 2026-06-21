@@ -15,11 +15,40 @@ class ChampionStatsFetcher:
     def __init__(self):
         self.http = urllib3.PoolManager(cert_reqs='CERT_NONE', retries=False)
         self.api_url = "https://127.0.0.1:2999/liveclientdata/allgamedata"
+        self.item_prices = self._load_item_prices()
+
+    def _load_item_prices(self):
+        """
+        Riot Data Dragon から最新のアイテムIDと価格（Total Cost）のマップを取得します。
+        失敗した場合は空の辞書を返し、API側の価格にフォールバックします。
+        """
+        try:
+            # 最新のゲームバージョンを取得
+            v_res = self.http.request('GET', 'https://ddragon.leagueoflegends.com/api/versions.json', timeout=1.5)
+            if v_res.status != 200:
+                return {}
+            versions = json.loads(v_res.data.decode('utf-8'))
+            latest_version = versions[0]
+
+            # アイテムの定義データを取得
+            item_url = f"https://ddragon.leagueoflegends.com/cdn/{latest_version}/data/ja_JP/item.json"
+            i_res = self.http.request('GET', item_url, timeout=2.5)
+            if i_res.status != 200:
+                return {}
+            item_data = json.loads(i_res.data.decode('utf-8'))
+
+            prices = {}
+            for item_id, item_info in item_data.get("data", {}).items():
+                gold_info = item_info.get("gold", {})
+                prices[int(item_id)] = gold_info.get("total", 0)
+            return prices
+        except Exception:
+            return {}
 
     def fetch_strongest_enemy(self):
         """
         Live Client API からデータを取得し、敵チームの最強チャンピオン情報を返します。
-        試合が始まっていない、または接続できない場合は None を返します。
+        取得した生データはデバッグ用に live_game_data.json に保存します。
         """
         try:
             # 接続タイムアウトと読み込みタイムアウトをそれぞれ0.2秒に設定し、ソケットのハングを防ぐ
@@ -30,6 +59,14 @@ class ChampionStatsFetcher:
                 return None
             
             data = json.loads(response.data.decode('utf-8'))
+            
+            # ログとして取得した生データをJSONファイルとして保存
+            try:
+                with open("live_game_data.json", "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
             return self._analyze_strongest_enemy(data)
         except Exception:
             # 接続エラーやタイムアウトが発生した場合は、ハングしたソケットを強制的にクローズしてクリアする
@@ -141,11 +178,13 @@ class ChampionStatsFetcher:
     def _calculate_equipment_gold(self, player_data):
         """
         対象プレイヤーの現在所持している装備（アイテム）の合計ゴールド価値を計算します。
+        Data Dragon から取得した正しい価格を優先し、なければAPIの price にフォールバックします。
         """
         total_gold = 0
         items = player_data.get("items", [])
         for item in items:
-            price = item.get("price", 0)
+            item_id = item.get("itemID", 0)
+            price = self.item_prices.get(item_id, item.get("price", 0))
             count = item.get("count", 1)
             total_gold += price * count
         return total_gold

@@ -10,3 +10,4 @@ wheels/
 .venv
 .idea
 test_overlay.py
+live_game_data.json
