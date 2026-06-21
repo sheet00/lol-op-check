@@ -12,7 +12,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ポーリング間隔（秒）
-POLLING_INTERVAL = 3.0
+POLLING_INTERVAL = 1.0
 
 def main():
     fetcher = ChampionStatsFetcher()

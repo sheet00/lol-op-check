@@ -145,7 +145,8 @@ class OverlayWindow:
             is_dead = champ.get("is_dead", False)
             
             if is_dead:
-                display_text = f"{name} [DEAD]\nKDA: {kills} / {deaths} / {assists}"
+                respawn_timer = champ.get("respawn_timer", 0)
+                display_text = f"{name} [DEAD ({respawn_timer}s)]\nKDA: {kills} / {deaths} / {assists}"
                 self.info_label.config(text=display_text, fg="#475569", font=("Meiryo UI", 11, "bold"))
                 self.title_label.config(text="STRONGEST ENEMY (DEAD)", fg="#64748b")
             else:
