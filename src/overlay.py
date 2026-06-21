@@ -149,19 +149,23 @@ class OverlayWindow:
             level = champ.get("level", 1)
             gold_ratio = champ.get("gold_ratio", 1.0)
             
+            # パーセンテージ差分を計算 (+40% や -10% など)
+            percent_diff = int(round((gold_ratio - 1.0) * 100))
+            percent_text = f"+{percent_diff}%" if percent_diff >= 0 else f"{percent_diff}%"
+            
             if is_dead:
                 respawn_timer = champ.get("respawn_timer", 0)
-                display_text = f"{name} (Lv.{level}) [x{gold_ratio}] [DEAD ({respawn_timer}s)]\nKDA: {kills} / {deaths} / {assists}"
+                display_text = f"{name} (Lv.{level}) [{percent_text}] [{respawn_timer}s]\nKDA: {kills} / {deaths} / {assists}"
                 self.info_label.config(text=display_text, fg="#475569", font=("Meiryo UI", 11, "bold"))
-                self.title_label.config(text="STRONGEST ENEMY (DEAD)", fg="#64748b")
+                self.title_label.config(text="STRONGEST ENEMY", fg="#64748b")
             else:
-                display_text = f"{name} (Lv.{level}) [x{gold_ratio}]\nKDA: {kills} / {deaths} / {assists}"
+                display_text = f"{name} (Lv.{level}) [{percent_text}]\nKDA: {kills} / {deaths} / {assists}"
                 
-                # ゴールド倍率に応じた条件付きカラーリング
-                if gold_ratio >= 1.5:
+                # ゴールド格差（パーセント）に応じた条件付きカラーリング
+                if percent_diff >= 40:
                     self.info_label.config(text=display_text, fg="#f87171", font=("Meiryo UI", 11, "bold"))
                     self.title_label.config(text="STRONGEST ENEMY (DANGER)", fg="#ff4655")
-                elif gold_ratio >= 1.3:
+                elif percent_diff >= 10:
                     self.info_label.config(text=display_text, fg="#fcd34d", font=("Meiryo UI", 11, "bold"))
                     self.title_label.config(text="STRONGEST ENEMY (WARN)", fg="#fbbf24")
                 else:
