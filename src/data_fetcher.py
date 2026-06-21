@@ -87,6 +87,11 @@ class ChampionStatsFetcher:
                     "assists": assists,
                     "is_dead": enemy.get("isDead", False),
                     "respawn_timer": int(enemy.get("respawnTimer", 0.0)),
+                    "level": enemy.get("level", 1),
                 }
+
+        # 最強の敵候補がキルもアシストも獲得していない（全員が0/0/0など、まだ誰も育っていない状態）なら表示しない
+        if strongest_enemy and strongest_enemy["kills"] == 0 and strongest_enemy["assists"] == 0:
+            return None
 
         return strongest_enemy

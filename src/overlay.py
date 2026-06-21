@@ -143,14 +143,15 @@ class OverlayWindow:
             deaths = champ.get("deaths", 0)
             assists = champ.get("assists", 0)
             is_dead = champ.get("is_dead", False)
+            level = champ.get("level", 1)
             
             if is_dead:
                 respawn_timer = champ.get("respawn_timer", 0)
-                display_text = f"{name} [DEAD ({respawn_timer}s)]\nKDA: {kills} / {deaths} / {assists}"
+                display_text = f"{name} (Lv.{level}) [DEAD ({respawn_timer}s)]\nKDA: {kills} / {deaths} / {assists}"
                 self.info_label.config(text=display_text, fg="#475569", font=("Meiryo UI", 11, "bold"))
                 self.title_label.config(text="STRONGEST ENEMY (DEAD)", fg="#64748b")
             else:
-                display_text = f"{name}\nKDA: {kills} / {deaths} / {assists}"
+                display_text = f"{name} (Lv.{level})\nKDA: {kills} / {deaths} / {assists}"
                 self.info_label.config(text=display_text, fg="#e2e8f0", font=("Meiryo UI", 11, "bold"))
                 self.title_label.config(text="STRONGEST ENEMY", fg="#ff4655")
         else:
