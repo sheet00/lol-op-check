@@ -4,6 +4,10 @@
 
 一目で「今誰を警戒すべきか」「その敵が現在デスしているか（あと何秒で復活するか）」を把握し、戦術的な判断を支援します。
 
+<p align="center">
+  <img src="./image.png" alt="LoL OP Checker UI Preview" width="300" />
+</p>
+
 ---
 
 ## 主な機能 (Features)
