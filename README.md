@@ -1,6 +1,6 @@
 # LoL OP Checker
 
-`lol-op-check` は、League of Legends (LoL) の試合中に敵チームの中で最も育っている（キャリーしている）危険なチャンピオンをリアルタイムで特定し、ゲーム画面上に常に最前面でオーバーレイ表示するサポートツールです。
+`lol-op-check` は、League of Legends (LoL) の試合中、**ローカルで起動しているゲームEXEが提供するAPIからリアルタイムに試合データを取得**し、敵チームの中で最も育っている（キャリーしている）危険なチャンピオンを特定してゲーム画面上に最前面でオーバーレイ表示するサポートツールです。
 
 一目で「今誰を警戒すべきか」「その敵が現在デスしているか（あと何秒で復活するか）」を把握し、戦術的な判断を支援します。
 
@@ -57,19 +57,50 @@ uv run src/main.py
 
 ---
 
-## 技術仕様 & 仕様詳細
+## データ取得の仕組み & 技術仕様
 
-### 強さスコアの算出式
+### 1. ローカルゲームEXEのAPIによるリアルタイムデータ取得
+本ツールは、試合中にローカルPC上で動作する **League of Legends ゲーム実行ファイル（`League of Legends.exe`）が公式に提供する Live Client Data API** からリアルタイムにデータを直接取得しています。
+
+- **エンドポイント**: `https://127.0.0.1:2999/liveclientdata/allgamedata`
+- **データ取得間隔**: 1秒間隔でポーリング（接続プールを最適化して低負荷で動作）
+- **安全・クリーンな設計**:
+  - メモリの直接読み取りやプロセス改ざん（チート行為）は一切行いません。
+  - 外部の中継サーバー等を経由せず、自身のPC内（ローカル通信 `127.0.0.1`）でのみ完結します。
+  - Riot Games 公式がサードパーティ製ツール向けに仕様公開している正規のローカルエンドポイントのみを利用しています。
+
+### 2. 強さスコアの算出式
 敵プレイヤーの強さは、以下の計算式に基づいてリアルタイム算出されます。
 
 $$\text{Score} = (\text{Kills} \times 3) + (\text{Assists} \times 1) - (\text{Deaths} \times 2)$$
 
-※ このスコアが最も高い敵チャンピオンを「最強の敵（警戒対象）」として自動特定します。
+※ このスコアが最も高い敵チャンピオンを「最強の敵（警戒対象）」として自動特定します。また、自チームの平均装備ゴールドに対する倍率から戦闘力比率を計算し、バーグラフで可視化します。
 
-### Live Client API との接続
-本ツールは、ローカルで動作する LoL クライアントが提供する公式の Live Client API からデータを安全に取得しています。
-- **エンドポイント**: `https://127.0.0.1:2999/liveclientdata/allgamedata`
-- 接続プールを最適化し、1秒間隔でポーリング処理を行っています。
+---
+
+## 処理フロー (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Player as プレイヤー
+    participant Fetcher as ChampionStatsFetcher
+    participant API as Live Client API (Local)
+    participant State as OverlayState
+    participant UI as OverlayWindow
+
+    Note over Player,UI: 1秒ごとのリアルタイム更新ループ (src/main.py)
+    
+    loop リアルタイムデータ取得 & 描画更新
+        Fetcher->>API: GET /liveclientdata/allgamedata (試合データ要求)
+        API-->>Fetcher: 全プレイヤーのKDA・装備アイテム生データ
+        Fetcher->>Fetcher: KDA強さスコア & 装備ゴールド戦闘力比率を算出
+        Fetcher->>Fetcher: 敵チームの中で最も育っているチャンピオンを特定
+        Fetcher->>State: update(strongest_champion)
+        State->>UI: 最新データに基づきUI更新
+        UI-->>Player: 最前面オーバーレイに強敵情報・KDA・戦闘力比率を表示
+    end
+```
 
 ---
 
@@ -78,5 +109,7 @@ $$\text{Score} = (\text{Kills} \times 3) + (\text{Assists} \times 1) - (\text{De
 - [src/main.py](./src/main.py) - アプリケーションのエントリーポイントとポーリングの制御ループ。
 - [src/data_fetcher.py](./src/data_fetcher.py) - Live Client API からのデータ取得、最強の敵の特定ロジック。
 - [src/overlay.py](./src/overlay.py) - Tkinter を使用したオーバーレイ UI の描画およびイベント処理。
-- [pyproject.toml](./pyproject.toml) - プロジェクトの依存関係（`urllib3` など）定義。
+- [scripts/build.py](./scripts/build.py) - PyInstaller による単一 EXE ビルドスクリプト。
+- [.github/workflows/release.yml](./.github/workflows/release.yml) - GitHub Actions による Windows EXE 自動ビルド・リリース設定。
+- [pyproject.toml](./pyproject.toml) - プロジェクトの依存関係定義。
 - [run.ps1](./run.ps1) - 起動用 PowerShell スクリプト。
