@@ -6,6 +6,14 @@ import sys
 import time
 from pathlib import Path
 
+# Fix UnicodeEncodeError on Windows CI runners (e.g. GitHub Actions cp1252)
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 def main():
     parser = argparse.ArgumentParser(description="PyInstaller build script for LoL OP Checker")
     parser.add_argument(
@@ -45,22 +53,22 @@ def main():
     spec_file = project_root / f"{args.name}.spec"
 
     if not entry_point.exists():
-        print(f"[ERROR] エントリーポイントが見つかりません: {entry_point}", file=sys.stderr)
+        print(f"[ERROR] Entry point not found: {entry_point}", file=sys.stderr)
         sys.exit(1)
 
     print("========================================")
     print("  LoL OP Checker - PyInstaller Build")
     print("========================================")
-    print(f"プロジェクトルート: {project_root}")
-    print(f"エントリーポイント: {entry_point}")
-    print(f"出力ファイル名:     {args.name}")
-    print(f"ウィンドウモード:   {'コンソール表示' if args.console else 'GUI (コンソール非表示)'}")
-    print(f"パッケージング形式: {'フォルダ (onedir)' if args.onedir else '単一ファイル (onefile)'}")
+    print(f"Project root:  {project_root}")
+    print(f"Entry point:   {entry_point}")
+    print(f"Output name:   {args.name}")
+    print(f"Window mode:   {'Console' if args.console else 'GUI (No Console)'}")
+    print(f"Package mode:  {'Folder (onedir)' if args.onedir else 'Single File (onefile)'}")
     print("========================================\n")
 
     # クリーンアップ
     if args.clean:
-        print("[INFO] 過去のビルド成果物を削除中...")
+        print("[INFO] Cleaning up previous build artifacts...")
         if dist_dir.exists():
             shutil.rmtree(dist_dir, ignore_errors=True)
         if build_dir.exists():
@@ -100,7 +108,7 @@ def main():
         else:
             print(f"[WARN] 指定されたアイコンファイルが見つかりません: {args.icon}")
 
-    print(f"[INFO] 実行コマンド: {' '.join(cmd)}\n")
+    print(f"[INFO] Running command: {' '.join(cmd)}\n")
 
     start_time = time.time()
     try:
@@ -108,17 +116,16 @@ def main():
         elapsed_time = time.time() - start_time
         if result.returncode == 0:
             print("\n========================================")
-            print("  [SUCCESS] ビルドが正常に完了しました！")
-            print(f"  出力先:     {dist_dir}")
-            print(f"  所要時間:   {elapsed_time:.2f} 秒")
+            print("  [SUCCESS] Build completed successfully!")
+            print(f"  Output directory: {dist_dir}")
+            print(f"  Elapsed time:     {elapsed_time:.2f} s")
             print("========================================")
         else:
-            print(f"\n[ERROR] ビルド中にエラーが発生しました (終了コード: {result.returncode}, 所要時間: {elapsed_time:.2f} 秒)", file=sys.stderr)
+            print(f"\n[ERROR] Build failed (exit code: {result.returncode}, elapsed time: {elapsed_time:.2f} s)", file=sys.stderr)
             sys.exit(result.returncode)
     except FileNotFoundError:
-        print("[ERROR] PythonまたはPyInstallerの実行に失敗しました。", file=sys.stderr)
-        print("以下のコマンドでPyInstallerをインストール、または uv で実行してください:", file=sys.stderr)
-        print("  uv run --with pyinstaller scripts/build.py", file=sys.stderr)
+        print("[ERROR] Failed to execute Python or PyInstaller.", file=sys.stderr)
+        print("Install PyInstaller or run with: uv run --with pyinstaller scripts/build.py", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":
