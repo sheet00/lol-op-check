@@ -52,32 +52,45 @@ class OverlayWindow:
         )
         self.frame.pack(fill="both", expand=True)
 
-        # 閉じるボタン
-        self.close_button = tk.Button(
-            self.frame,
-            text="×",
-            command=self.close,
-            bg="#141a24",
-            fg="#a0aab8",
-            bd=0,
-            font=("Meiryo UI", 9, "bold"),
-            activebackground="#202938",
-            activeforeground="#f5f7fb",
-        )
-        self.close_button.place(relx=1.0, x=-6, y=6, anchor="ne", width=20, height=20)
+        # ヘッダー領域（タイトル＋閉じるボタン）
+        self.header_frame = tk.Frame(self.frame, bg="#080c12")
+        self.header_frame.pack(fill="x", padx=4, pady=(2, 0))
 
         # タイトル表示
         self.title_label = tk.Label(
-            self.frame,
+            self.header_frame,
             text="MOST POWERFUL CHAMPION",
-            anchor="nw",
+            anchor="w",
             bg="#080c12",
             fg="#ff4655", # 警告色っぽい鮮やかなネオンレッド
             font=("Meiryo UI", 9, "bold"),
-            padx=8,
-            pady=4,
+            padx=4,
+            pady=2,
         )
-        self.title_label.pack(fill="x")
+        self.title_label.pack(side="left", fill="x", expand=True)
+
+        # 閉じるボタン（視認性が高く押しやすい✕ボタン、ホバー時に赤く変化）
+        self.close_button = tk.Button(
+            self.header_frame,
+            text="✕",
+            command=self.close,
+            bg="#080c12",
+            fg="#94a3b8",
+            activebackground="#dc2626",
+            activeforeground="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            relief="flat",
+            cursor="hand2",
+            font=("Segoe UI", 9, "bold"),
+            width=3,
+            height=1,
+        )
+        self.close_button.pack(side="right", padx=(0, 2), pady=0)
+
+        # 閉じるボタンのホバーエフェクト
+        self.close_button.bind("<Enter>", lambda _: self.close_button.config(bg="#ef4444", fg="#ffffff"))
+        self.close_button.bind("<Leave>", lambda _: self.close_button.config(bg="#080c12", fg="#94a3b8"))
 
         # チャンピオン情報表示用ラベル
         self.info_label = tk.Label(
@@ -101,13 +114,11 @@ class OverlayWindow:
             bd=0,
         )
 
-        # ドラッグ可能にするためのバインド
-        for widget in (self.root, self.frame, self.title_label, self.info_label, self.canvas):
+        # ドラッグ可能にするためのバインド（閉じるボタンはクリックを優先するため除外）
+        for widget in (self.root, self.frame, self.header_frame, self.title_label, self.info_label, self.canvas):
             widget.bind("<ButtonPress-1>", self._start_drag)
             widget.bind("<B1-Motion>", self._drag)
-            widget.bind("<Button-3>", self._handle_close_event)
 
-        self.root.bind("<Escape>", self._handle_close_event)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.refresh_view()
 
@@ -135,10 +146,6 @@ class OverlayWindow:
         y = self.root.winfo_y() + dy
         self.root.geometry(f"+{x}+{y}")
         self._drag_start = (event.x_root, event.y_root)
-
-    def _handle_close_event(self, _event):
-        self.close()
-        return "break"
 
     def refresh_view(self):
         if self.is_closed() or not self._widget_exists(self.info_label):

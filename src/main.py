@@ -23,7 +23,7 @@ def main():
     last_fetch_time = 0
 
     print("LoL OP Checker overlay window started.")
-    print("Drag window with Left Click. Close window with Right Click or Escape key.")
+    print("Drag window with Left Click. Close window with [✕] button.")
 
     try:
         while True:
@@ -62,6 +62,7 @@ def main():
     finally:
         overlay_window.close()
         print("LoL OP Checker stopped.")
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()
